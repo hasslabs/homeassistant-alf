@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "alf-recon"
+version = "0.1.0"
+description = "Recon toolkit + client for the Alf (lfhub.net / Onics-Develco) cloud API"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+capture = ["mitmproxy>=10.0"]
+dev = ["pytest>=8.0", "ruff>=0.5", "pytest-asyncio>=0.23", "aiohttp>=3.9"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["custom_components/alf/alfcloud"]
+
+[tool.setuptools.packages.find]
+include = ["recon*", "alfcloud*"]

@@ -1,0 +1,30 @@
+# Recon captures may contain tokens / personnummer — never commit raw flows
+recon/raw/
+# Redacted fixtures still hold personal device data (names, serials, home layout) — keep local
+recon/fixtures/*.json
+recon/**/*.flow
+recon/**/*.har
+*.flow
+*.har
+secrets.*
+*.secret.*
+*.local.svg
+*.local.png
+*.local.html
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

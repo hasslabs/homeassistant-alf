@@ -1,0 +1,80 @@
+{
+  "homeId": "home-0001",
+  "devices": [
+    {
+      "id": "dev-gw",
+      "name": "LF Gateway",
+      "type": "develco.gateway",
+      "state": "online",
+      "homeId": "home-0001",
+      "roomId": "room-hall",
+      "parentId": null,
+      "specifications": {
+        "modelId": "MGW201-S407",
+        "modelName": "Develco Gateway",
+        "vendor": "Develco Products A/S",
+        "firmwareVersion": "2.10.33",
+        "serialNumber": "GW00000000000000"
+      },
+      "power": {"source": {"value": "mains", "defect": false},
+                "status": {"value": "good", "percentage": null, "voltage": null}},
+      "network": {"source": "gsm", "status": "na", "wlan": null},
+      "features": [
+        {"id": "gateway.mode", "deviceFeatureId": "dev-gw:gateway.mode",
+         "current": {"value": "home", "updatedAt": "2025-07-09T16:17:21.812Z"}, "desired": null}
+      ]
+    },
+    {
+      "id": "dev-plug",
+      "name": "Smart Plug",
+      "type": "frient.smartplug",
+      "state": "online",
+      "homeId": "home-0001",
+      "roomId": "room-liv",
+      "parentId": "dev-gw",
+      "specifications": {
+        "modelId": "SPLZB-141",
+        "modelName": "Frient Smart Plug Mini",
+        "vendor": "Frient A/S",
+        "protocol": "zigbee",
+        "serialNumber": "PLUG000000000000"
+      },
+      "power": {"source": {"value": "mains", "defect": false},
+                "status": {"value": "good", "percentage": null, "voltage": null}},
+      "network": {"source": "zigbee", "status": "good", "wlan": null},
+      "features": [
+        {"id": "smartplug.onOff", "deviceFeatureId": "dev-plug:smartplug.onOff",
+         "current": {"value": true, "updatedAt": "2026-06-08T11:19:12.080Z"}, "desired": null},
+        {"id": "smartplug.demand", "deviceFeatureId": "dev-plug:smartplug.demand",
+         "current": {"value": 1, "updatedAt": "2026-07-08T07:08:20.959Z"}, "desired": null},
+        {"id": "smartplug.summationDelivered", "deviceFeatureId": "dev-plug:smartplug.summationDelivered",
+         "current": {"value": 11227, "updatedAt": "2026-07-11T21:43:02.806Z"}, "desired": null}
+      ]
+    },
+    {
+      "id": "dev-smoke",
+      "name": "Brandlarm 1",
+      "type": "frient.smokeDetector",
+      "state": "online",
+      "homeId": "home-0001",
+      "roomId": "room-sov",
+      "parentId": "dev-gw",
+      "specifications": {
+        "modelId": "SMSZB-120",
+        "modelName": "Frient Intelligent Smoke Alarm",
+        "vendor": "Frient A/S",
+        "protocol": "zigbee",
+        "serialNumber": "SMOKE00000000000"
+      },
+      "power": {"source": {"value": "battery", "defect": false},
+                "status": {"value": "good", "percentage": null, "voltage": {"value": 3, "unit": "v"}}},
+      "network": {"source": "zigbee", "status": "good", "wlan": null},
+      "features": [
+        {"id": "smokeDetector.fire", "deviceFeatureId": "dev-smoke:smokeDetector.fire",
+         "current": {"value": false, "updatedAt": "2026-06-08T11:19:14.663Z"}, "desired": null},
+        {"id": "generic.temperature", "deviceFeatureId": "dev-smoke:generic.temperature",
+         "current": {"value": 26.6, "updatedAt": "2026-07-11T21:14:05.353Z"}, "desired": null}
+      ]
+    }
+  ]
+}

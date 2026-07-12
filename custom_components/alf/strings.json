@@ -1,0 +1,56 @@
+{
+  "config": {
+    "progress": {
+      "bankid": "Open the BankID app, choose \"Scan QR code\", then scan:\n\n![BankID QR]({qr})"
+    },
+    "step": {
+      "finish": {
+        "title": "Alf",
+        "data": {"enable_control": "Enable device control (experimental)"},
+        "data_description": {
+          "enable_control": "Adds switches for smart plugs. Does not touch alarm or lock."
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Alf is already configured.",
+      "reauth_successful": "Re-authentication was successful.",
+      "bankid_failed": "BankID login failed. Please add Alf again to retry."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Alf settings",
+        "data": {"enable_control": "Enable device control (experimental)"},
+        "data_description": {
+          "enable_control": "Adds switches for smart plugs. Does not touch alarm or lock."
+        }
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "smoke": {"name": "Smoke"},
+      "moisture": {"name": "Leak"},
+      "motion": {"name": "Motion"},
+      "opening": {"name": "Opening"},
+      "tamper": {"name": "Tamper"},
+      "problem": {"name": "Problem"},
+      "high_flow": {"name": "High water flow"},
+      "hot_pipe": {"name": "Hot pipe"},
+      "on_pipe": {"name": "Detached from pipe"},
+      "connectivity": {"name": "Connectivity"}
+    },
+    "sensor": {
+      "temperature": {"name": "Temperature"},
+      "humidity": {"name": "Humidity"},
+      "power": {"name": "Power"},
+      "energy": {"name": "Energy"},
+      "illuminance": {"name": "Illuminance"},
+      "battery": {"name": "Battery"},
+      "battery_voltage": {"name": "Battery voltage"}
+    },
+    "switch": {"outlet": {"name": "Plug"}}
+  }
+}

@@ -1,0 +1,25 @@
+[
+  {
+    "id": "home-0001",
+    "name": "Hemma",
+    "address": null,
+    "postalCode": null,
+    "type": "primary",
+    "version": 12,
+    "createdAt": "2025-07-09T16:00:00.000Z",
+    "updatedAt": "2026-07-11T21:00:00.000Z",
+    "users": [
+      {"userId": "user-1", "role": "owner", "firstName": "A", "lastName": "B"}
+    ],
+    "rooms": [
+      {"id": "room-hall", "name": "Hall", "category": "hall"},
+      {"id": "room-liv", "name": "Vardagsrum", "category": "livingroom"},
+      {"id": "room-sov", "name": "Sovrum", "category": "bedroom"}
+    ],
+    "linkedInsurance": {"insuredObject": "villa", "insuranceType": "home",
+                        "lfAllianceCompanyCode": "00", "lfAllianceCompanyName": null},
+    "alarmSystem": null,
+    "weatherWarnings": [],
+    "tasks": []
+  }
+]

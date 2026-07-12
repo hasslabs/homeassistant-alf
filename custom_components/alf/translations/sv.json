@@ -1,0 +1,56 @@
+{
+  "config": {
+    "progress": {
+      "bankid": "Öppna BankID-appen, välj \"Skanna QR-kod\" och skanna sedan:\n\n![BankID QR]({qr})"
+    },
+    "step": {
+      "finish": {
+        "title": "Alf",
+        "data": {"enable_control": "Aktivera styrning (experimentellt)"},
+        "data_description": {
+          "enable_control": "Skapar switchar för smarta plugg. Rör inte larm eller lås."
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Alf är redan konfigurerad.",
+      "reauth_successful": "Inloggningen uppdaterades.",
+      "bankid_failed": "BankID-inloggningen misslyckades. Lägg till Alf igen för att försöka på nytt."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Alf-inställningar",
+        "data": {"enable_control": "Aktivera styrning (experimentellt)"},
+        "data_description": {
+          "enable_control": "Skapar switchar för smarta plugg. Rör inte larm eller lås."
+        }
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "smoke": {"name": "Rök"},
+      "moisture": {"name": "Läcka"},
+      "motion": {"name": "Rörelse"},
+      "opening": {"name": "Öppning"},
+      "tamper": {"name": "Manipulering"},
+      "problem": {"name": "Problem"},
+      "high_flow": {"name": "Högt vattenflöde"},
+      "hot_pipe": {"name": "Varmt rör"},
+      "on_pipe": {"name": "Lossnat från röret"},
+      "connectivity": {"name": "Anslutning"}
+    },
+    "sensor": {
+      "temperature": {"name": "Temperatur"},
+      "humidity": {"name": "Luftfuktighet"},
+      "power": {"name": "Effekt"},
+      "energy": {"name": "Energi"},
+      "illuminance": {"name": "Ljusstyrka"},
+      "battery": {"name": "Batteri"},
+      "battery_voltage": {"name": "Batterispänning"}
+    },
+    "switch": {"outlet": {"name": "Plugg"}}
+  }
+}
