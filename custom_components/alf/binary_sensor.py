@@ -71,10 +71,12 @@ class AlfBinarySensor(AlfEntity, BinarySensorEntity):
             key = _DIAGNOSTIC_KEYS.get(feature_id.lower())
             if key:
                 self._attr_translation_key = key
-                # These are fault-style flags: "on" = something to look at, "off" = OK.
-                # PROBLEM makes HA render them as OK / Problem instead of Off / On, so a
-                # healthy LeakBot reads "OK" rather than a confusing bare "off".
-                self._attr_device_class = BinarySensorDeviceClass.PROBLEM
+                # These LeakBot bits are inferred, not verified fault signals: at least one
+                # (onpipe) reads active on units that are correctly attached, so they are plain
+                # diagnostics rather than PROBLEM alarms - no crying wolf. onpipe is unreliable
+                # enough that it is also disabled by default.
+                if feature_id.lower() == "leakbot.onpipe":
+                    self._attr_entity_registry_enabled_default = False
             else:
                 self._attr_name = humanize_feature(feature_id)
 

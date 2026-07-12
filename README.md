@@ -46,21 +46,22 @@ mönster. Utifrån det härleds dessa signaler:
 | Entitet | Kan visa | Normalt | Vad det betyder / om den avviker |
 |---|---|---|---|
 | **Läcka** | `Läcka` / `Torrt` | **Torrt** | LeakBots samlade läck-bedömning. `Läcka` = den tror det läcker på tilloppet. **Det är den här du bygger automationer/notiser på.** |
-| **Högt vattenflöde** | `OK` / `Problem` | **OK** | Har vatten runnit stadigt längre än normal användning förklarar. `Problem` = ovanligt långvarigt flöde, det tidigaste tecknet på en läcka. |
-| **Varmt rör** | `OK` / `Problem` | **OK** | Röret den klämmer på är för varmt för att mäta läckor tillförlitligt. `Problem` = sitter troligen på fel rör eller nära en värmekälla (installationsfel, inte en läcka). |
-| **Lossnat från röret** | `OK` / `Problem` | **OK** | Om klämman lossnat från röret. `Problem` = har trillat av / känner inte röret, så avläsningarna går inte att lita på. |
+| **Högt vattenflöde** | `Av` / `På` | **Av** | Rå diagnostik-bit. `På` = vatten har runnit stadigt längre än normal användning förklarar (möjlig läcka). Tolkad, ej verifierad - bygg inte larm på den. |
+| **Varmt rör** | `Av` / `På` | **Av** | Rå diagnostik-bit. `På` = röret den klämmer på är för varmt för att mäta läckor tillförlitligt (troligen fel rör). Tolkad, ej verifierad. |
+| **Lossnat från röret** | `Av` / `På` | **Av** | Rå diagnostik-bit, **opålitlig** - vissa enheter som sitter korrekt visar ändå `På`. Därför **avstängd som standard**. Lita inte på den för att avgöra om klämman lossnat. |
 | **Problem** | `OK` / `Problem` | **OK** | Hårdvaruhälsa på själva enheten. `Problem` = fel på enheten (behöver ses över). |
 | **Anslutning** | `Ansluten` / `Frånkopplad` | **Ansluten** | `Frånkopplad` = enheten är offline (batteri, räckvidd eller hubben nere). |
 
-**En frisk LeakBot:** Läcka = `Torrt`, allt annat = `OK`, Anslutning = `Ansluten`.
+**En frisk LeakBot:** Läcka = `Torrt`, Problem = `OK`, Anslutning = `Ansluten`.
 
-De fyra `OK/Problem`-raderna använder Home Assistants `problem`-device_class, så de visar **OK** när allt
-är bra och **Problem** först när LeakBot flaggar något - "tyst tills något är fel". **Läcka** är den enda
-du bygger automationer på.
+Högt vattenflöde / Varmt rör / Lossnat är **råa, tolkade diagnostik-bitar** (inte verifierade fel-larm),
+så de visas som vanliga `Av`/`På`-sensorer under Diagnostik - inte som röda "Problem". Speciellt
+**Lossnat från röret är opålitlig** (kan visa `På` fast klämman sitter kvar) och är därför avstängd som
+standard. **Läcka**, **Problem** och **Anslutning** är de du bygger automationer på.
 
 > Betydelserna för Högt vattenflöde / Varmt rör / Lossnat är härledda ur LeakBots Thermi-Q-mekanik och
-> API-fältnamnen. Om **Läcka** visar `Läcka` medan allt är torrt: kolla Alf-appen - det kan vara en äkta
-> smygläcka att utreda, eller (om appen säger allt-klart) en polaritetsegenhet att rapportera.
+> API-fältnamnen, inte bekräftade. Om **Läcka** visar `Läcka` medan allt är torrt: kolla Alf-appen - det
+> kan vara en äkta smygläcka att utreda.
 
 ### Gateway (Develco) och batterier
 - **Anslutning** - hubben är online. (Dess interna `mode`/`scan`-inställningar exponeras inte.)

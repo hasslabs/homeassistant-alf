@@ -49,21 +49,22 @@ tell-tale pattern. From that it derives these signals:
 | Entity | Can show | Normally | What it means / if it flips |
 |---|---|---|---|
 | **Leak** | `Detected` / `Clear` | **Clear** | LeakBot's overall leak verdict. `Detected` = it believes water is leaking on the supply. **This is the one to build automations/alerts on.** |
-| **High water flow** | `OK` / `Problem` | **OK** | Whether water has flowed steadily longer than normal use explains. `Problem` = unusually sustained flow, the earliest sign of a leak. |
-| **Hot pipe** | `OK` / `Problem` | **OK** | The clamped pipe is too warm to sense leaks reliably. `Problem` = likely on the wrong pipe or near a heat source (an install issue, not a leak). |
-| **Detached from pipe** | `OK` / `Problem` | **OK** | Whether the clamp has come off the pipe. `Problem` = fell off / not sensing the pipe, so readings can't be trusted. |
+| **High water flow** | `Off` / `On` | **Off** | Raw diagnostic bit. `On` = water has flowed steadily longer than normal use explains (possible leak). Inferred, unverified - don't build alerts on it. |
+| **Hot pipe** | `Off` / `On` | **Off** | Raw diagnostic bit. `On` = the clamped pipe is too warm to sense leaks reliably (likely the wrong pipe). Inferred, unverified. |
+| **Detached from pipe** | `Off` / `On` | **Off** | Raw diagnostic bit, **unreliable** - some correctly-attached units still report `On`. Therefore **disabled by default**. Don't rely on it to tell whether the clamp came off. |
 | **Problem** | `OK` / `Problem` | **OK** | The device's own hardware health. `Problem` = a device fault (needs attention). |
 | **Connectivity** | `Connected` / `Disconnected` | **Connected** | `Disconnected` = the device is offline (battery, range, or hub down). |
 
-**A healthy LeakBot reads:** Leak = `Clear`, everything else = `OK`, Connectivity = `Connected`.
+**A healthy LeakBot reads:** Leak = `Clear`, Problem = `OK`, Connectivity = `Connected`.
 
-The four `OK/Problem` rows use Home Assistant's `problem` device class, so they show **OK** when all is
-well and **Problem** only when LeakBot flags something - quiet until something is wrong. **Leak** is the
-one to build automations on.
+High water flow / Hot pipe / Detached are **raw, inferred diagnostic bits** (not verified fault signals),
+shown as plain `Off`/`On` sensors under Diagnostic rather than red "Problem". In particular **Detached
+from pipe is unreliable** (can read `On` while the clamp is fine) and is disabled by default. **Leak**,
+**Problem** and **Connectivity** are the ones to build automations on.
 
 > The meanings of High water flow / Hot pipe / Detached are inferred from LeakBot's Thermi-Q mechanism
-> and the API field names. If **Leak** shows `Detected` while everything is dry, check the Alf app: it
-> may be a genuine slow-leak warning to investigate, or - if the app says all-clear - a polarity quirk to report.
+> and the API field names, not confirmed. If **Leak** shows `Detected` while everything is dry, check the
+> Alf app - it may be a genuine slow-leak warning to investigate.
 
 ### Gateway (Develco) and batteries
 - **Connectivity** - the hub is online. (Its internal `mode`/`scan` settings are not exposed.)
