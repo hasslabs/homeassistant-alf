@@ -6,10 +6,12 @@ import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .alfcloud import AlfAuth, AlfClient, Device, Home
 from .alfcloud.errors import AlfApiError, AlfAuthError
+from .cleanup import orphaned_device_ids
 from .const import CONF_REFRESH_TOKEN, DEFAULT_SCAN_INTERVAL, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
@@ -44,7 +46,26 @@ class AlfDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Device]]):
         except AlfApiError as err:
             raise UpdateFailed(str(err)) from err
         self._persist_rotated_refresh_token()
+        self._purge_orphaned_devices(set(devices))
         return devices
+
+    def _purge_orphaned_devices(self, live_ids: set[str]) -> None:
+        """Drop registry devices the Alf account no longer contains.
+
+        Removing and re-adding a device in the Alf app mints a new device id, which
+        would otherwise leave the old one stranded as a permanent "unavailable"
+        entry. We reconcile the whole registry (not just this session's diff) so an
+        already-stranded device is cleaned up on the next poll too. Dropping the
+        config entry from the device makes HA delete it and its entities.
+        """
+        device_reg = dr.async_get(self.hass)
+        entries = dr.async_entries_for_config_entry(
+            device_reg, self.config_entry.entry_id
+        )
+        for device_id in orphaned_device_ids(entries, live_ids, DOMAIN):
+            device_reg.async_update_device(
+                device_id, remove_config_entry_id=self.config_entry.entry_id
+            )
 
     def _persist_rotated_refresh_token(self) -> None:
         current = self._auth.refresh_token
