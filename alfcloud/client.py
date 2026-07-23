@@ -7,7 +7,7 @@ import aiohttp
 
 from .auth import AlfAuth
 from .const import ACTION_PATH, API_BASE, DEVICES_PATH, HOMES_PATH
-from .errors import AlfApiError
+from .errors import AlfApiError, AlfConnectionError
 from .models import Device, Home, parse_devices, parse_homes
 
 
@@ -46,4 +46,4 @@ class AlfClient:
                     raise AlfApiError(f"{method} {path} failed: HTTP {resp.status}", resp.status)
                 return await resp.json()
         except aiohttp.ClientError as err:
-            raise AlfApiError(f"{method} {path} transport error: {err}") from err
+            raise AlfConnectionError(f"{method} {path} transport error: {err}") from err

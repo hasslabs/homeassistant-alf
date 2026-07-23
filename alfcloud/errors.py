@@ -10,6 +10,10 @@ class AlfAuthError(AlfError):
     """Authentication or token refresh failed (re-auth required)."""
 
 
+class AlfConnectionError(AlfError):
+    """A network transport error (DNS, connection, timeout) - transient, retryable."""
+
+
 class AlfApiError(AlfError):
     """An API request returned an error status."""
 

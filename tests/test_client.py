@@ -2,7 +2,7 @@ import pytest
 
 from alfcloud.auth import AlfAuth
 from alfcloud.client import AlfClient
-from alfcloud.errors import AlfApiError
+from alfcloud.errors import AlfApiError, AlfConnectionError
 
 
 def _token(fake, make_jwt, refresh="rt"):
@@ -66,4 +66,12 @@ async def test_server_error_raises_api_error(fake, make_jwt):
     session = fake.Session([_token(fake, make_jwt), fake.Response(status=500)])
     client = AlfClient(AlfAuth("rt", "secret", session), session)
     with pytest.raises(AlfApiError):
+        await client.async_get_devices("h1")
+
+
+async def test_request_transport_error_raises_connection_error(fake, make_jwt):
+    # Token refresh succeeds, but the data request hits a transport error -> transient.
+    session = fake.Session([_token(fake, make_jwt), fake.Boom()])
+    client = AlfClient(AlfAuth("rt", "secret", session), session)
+    with pytest.raises(AlfConnectionError):
         await client.async_get_devices("h1")

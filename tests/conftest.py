@@ -23,6 +23,25 @@ class FakeResponse:
         return False
 
 
+class BoomResponse:
+    """A queued response whose context entry raises a transport error.
+
+    Stands in for a DNS/connect/timeout failure - the same aiohttp.ClientError
+    family the real client raises when it can't reach lfhub.net.
+    """
+
+    def __init__(self, message: str = "Cannot connect to host auth.lfhub.net:443"):
+        self._message = message
+
+    async def __aenter__(self):
+        import aiohttp
+
+        raise aiohttp.ClientError(self._message)
+
+    async def __aexit__(self, *exc):
+        return False
+
+
 class FakeSession:
     """Returns queued FakeResponses in order and records every call."""
 
@@ -45,7 +64,7 @@ class FakeSession:
 @pytest.fixture
 def fake():
     """Namespace exposing the Session/Response doubles."""
-    return SimpleNamespace(Session=FakeSession, Response=FakeResponse)
+    return SimpleNamespace(Session=FakeSession, Response=FakeResponse, Boom=BoomResponse)
 
 
 @pytest.fixture

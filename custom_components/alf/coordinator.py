@@ -10,7 +10,7 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .alfcloud import AlfAuth, AlfClient, Device, Home
-from .alfcloud.errors import AlfApiError, AlfAuthError
+from .alfcloud.errors import AlfApiError, AlfAuthError, AlfConnectionError
 from .cleanup import orphaned_device_ids
 from .const import CONF_REFRESH_TOKEN, DEFAULT_SCAN_INTERVAL, DOMAIN
 
@@ -41,6 +41,11 @@ class AlfDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Device]]):
             for home in homes:
                 for device in await self.client.async_get_devices(home.id):
                     devices[device.id] = device
+        except AlfConnectionError as err:
+            # Transient network/DNS failure (e.g. HA started before DNS was up).
+            # UpdateFailed makes HA retry with backoff - and become ConfigEntryNotReady
+            # on first setup - instead of forcing a manual reload or re-auth.
+            raise UpdateFailed(str(err)) from err
         except AlfAuthError as err:
             raise ConfigEntryAuthFailed(str(err)) from err
         except AlfApiError as err:

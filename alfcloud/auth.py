@@ -8,7 +8,7 @@ import time
 import aiohttp
 
 from .const import CLIENT_ID, TOKEN_URL
-from .errors import AlfAuthError
+from .errors import AlfAuthError, AlfConnectionError
 
 # Refresh this many seconds before the access token actually expires.
 _EXPIRY_MARGIN_S = 60
@@ -73,7 +73,7 @@ class AlfAuth:
                     raise AlfAuthError(f"token refresh failed: HTTP {resp.status}")
                 payload = await resp.json()
         except aiohttp.ClientError as err:
-            raise AlfAuthError(f"token refresh transport error: {err}") from err
+            raise AlfConnectionError(f"token refresh transport error: {err}") from err
 
         token = payload.get("access_token")
         if not token:

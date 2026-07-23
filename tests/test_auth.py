@@ -5,7 +5,7 @@ import time
 import pytest
 
 from alfcloud.auth import AlfAuth
-from alfcloud.errors import AlfAuthError
+from alfcloud.errors import AlfAuthError, AlfConnectionError
 
 
 def _make_jwt(exp: int) -> str:
@@ -50,3 +50,23 @@ async def test_bad_refresh_raises_auth_error(fake):
 
     with pytest.raises(AlfAuthError):
         await auth.async_get_access_token()
+
+
+async def test_transport_error_raises_connection_error(fake):
+    # DNS/connect failure at refresh time is transient, not an auth failure:
+    # it must be a distinct AlfConnectionError so HA retries instead of forcing re-auth.
+    session = fake.Session([fake.Boom("Timeout while contacting DNS servers")])
+    auth = AlfAuth("rt", "app-secret", session)
+
+    with pytest.raises(AlfConnectionError):
+        await auth.async_get_access_token()
+
+
+async def test_connection_error_is_not_auth_error(fake):
+    # Guard the classification boundary: a transport error must NOT be caught as AlfAuthError.
+    session = fake.Session([fake.Boom()])
+    auth = AlfAuth("rt", "app-secret", session)
+
+    with pytest.raises(AlfConnectionError):
+        await auth.async_get_access_token()
+    assert not issubclass(AlfConnectionError, AlfAuthError)

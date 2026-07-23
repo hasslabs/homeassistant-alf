@@ -1,7 +1,7 @@
 """Standalone async client for the Alf (lfhub.net) cloud API. No Home Assistant deps."""
 from .auth import AlfAuth
 from .client import AlfClient
-from .errors import AlfApiError, AlfAuthError, AlfError
+from .errors import AlfApiError, AlfAuthError, AlfConnectionError, AlfError
 from .models import Device, Feature, Home, Room, parse_devices, parse_homes
 
 __all__ = [
@@ -9,6 +9,7 @@ __all__ = [
     "AlfClient",
     "AlfError",
     "AlfAuthError",
+    "AlfConnectionError",
     "AlfApiError",
     "Device",
     "Feature",
