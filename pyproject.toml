@@ -11,7 +11,7 @@ dependencies = []
 
 [project.optional-dependencies]
 capture = ["mitmproxy>=10.0"]
-dev = ["pytest>=8.0", "ruff>=0.5", "pytest-asyncio>=0.23", "aiohttp>=3.14.3"]
+dev = ["pytest>=9.0.3", "ruff>=0.5", "pytest-asyncio>=0.23", "aiohttp>=3.14.3"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
