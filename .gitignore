@@ -28,3 +28,5 @@ venv/
 Thumbs.db
 .vscode/
 .idea/
+# Byggs om lokalt av graphify-hooken vid varje commit - stod för nästan allt diffbrus i git status.
+graphify-out/
