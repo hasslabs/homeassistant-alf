@@ -30,3 +30,7 @@ Thumbs.db
 .idea/
 # Byggs om lokalt av graphify-hooken vid varje commit - stod för nästan allt diffbrus i git status.
 graphify-out/
+
+# /brag-arbetsmapp (Hyperframes-projekt, snapshots, musik). Färdig video ligger i docs/media/.
+brag-output/
+.impeccable/

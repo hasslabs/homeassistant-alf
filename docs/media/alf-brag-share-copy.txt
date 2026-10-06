@@ -1,0 +1,2 @@
+Alf for Home Assistant.
+The Alf hub is locked, so I reverse-engineered the app instead: one BankID scan and every Alf sensor lands in Home Assistant, with the alarm central and insurance discount untouched.
