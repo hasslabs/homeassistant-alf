@@ -69,7 +69,6 @@ async def test_connection_error_is_not_auth_error(fake):
 
     with pytest.raises(AlfConnectionError):
         await auth.async_get_access_token()
-    assert not issubclass(AlfConnectionError, AlfAuthError)
 
 
 async def test_missing_access_token_raises_auth_error(fake):

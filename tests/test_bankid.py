@@ -72,6 +72,7 @@ class Session:
         self._routes = {k: list(v) for k, v in routes.items()}
         self.calls: list[dict] = []
         self.closed = False
+        self.close_calls = 0
 
     def _take(self, method, url, **kwargs):
         self.calls.append({"method": method, "url": url, **kwargs})
@@ -90,6 +91,7 @@ class Session:
         return self._take("POST", url, **kwargs)
 
     async def close(self):
+        self.close_calls += 1
         self.closed = True
 
 
@@ -347,4 +349,5 @@ async def test_close_is_idempotent():
     login = await _login({})
     await login.async_close()
     assert login._session.closed
-    await login.async_close()  # already closed: no error
+    await login.async_close()  # already closed: the guard must skip a second close()
+    assert login._session.close_calls == 1
