@@ -70,8 +70,13 @@ def _flow(monkeypatch, **login_kwargs):
 
 
 async def _step(flow):
-    """Advance one bankid step after letting the pending task finish."""
-    await asyncio.sleep(0)
+    """Advance one bankid step after the pending login task has finished.
+
+    Waits on the task itself (rather than a single event-loop tick) so the tests
+    stay deterministic even if the fake login's coroutines start awaiting.
+    """
+    if flow._task is not None:
+        await asyncio.wait({flow._task})
     return await flow.async_step_bankid()
 
 
@@ -199,3 +204,25 @@ async def test_options_flow_defaults_to_current_value_and_saves_input():
 
     saved = await opts.async_step_init({"enable_control": False})
     assert saved == {"type": "create_entry", "title": "", "data": {"enable_control": False}}
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "BUG: config_flow.py has no async_remove override, so a flow the user abandons "
+        "mid-QR never calls AlfBankIDLogin.async_close() and its own aiohttp session leaks"
+    ),
+)
+async def test_abandoned_flow_closes_login_session(monkeypatch):
+    # HA calls FlowHandler.async_remove() when the user closes the dialog. The login was
+    # started in async_step_user and owns a private aiohttp.ClientSession (bankid.py),
+    # which only _fail() and the success path ever close.
+    flow, created = _flow(monkeypatch)
+    await flow.async_step_user()
+    await asyncio.wait({flow._task})
+
+    flow.async_remove()
+    for _ in range(3):  # allow a scheduled close task to run
+        await asyncio.sleep(0)
+
+    assert created[0].closed == 1
