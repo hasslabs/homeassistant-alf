@@ -34,3 +34,7 @@ graphify-out/
 # /brag-arbetsmapp (Hyperframes-projekt, snapshots, musik). Färdig video ligger i docs/media/.
 brag-output/
 .impeccable/
+
+# Coverage output
+.coverage
+htmlcov/
