@@ -32,3 +32,20 @@ def test_format_inventory_renders_markdown_table():
     table = format_inventory(rows)
     assert "| Method | Host | Path | Count | Statuses |" in table
     assert "| GET | api.alf.se | /devices | 1 | 200 |" in table
+
+
+def test_load_records_reads_json_files_in_name_order(tmp_path):
+    import json
+
+    from recon.summarize import load_records
+
+    (tmp_path / "0002.json").write_text(json.dumps(_rec("GET", "h", "/b", 200)), encoding="utf-8")
+    (tmp_path / "0001.json").write_text(json.dumps(_rec("GET", "h", "/a", 200)), encoding="utf-8")
+    (tmp_path / "notes.txt").write_text("ignored", encoding="utf-8")
+
+    assert [r["path"] for r in load_records(tmp_path)] == ["/a", "/b"]
+
+
+def test_inventory_same_path_different_methods_are_separate_rows():
+    rows = inventory([_rec("POST", "h", "/x", 201), _rec("GET", "h", "/x", 200)])
+    assert [r["method"] for r in rows] == ["GET", "POST"]
