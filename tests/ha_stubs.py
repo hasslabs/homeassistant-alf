@@ -76,6 +76,10 @@ class ConfigEntryAuthFailed(Exception):
     pass
 
 
+class ConfigEntryNotReady(Exception):
+    pass
+
+
 # --- config entries / flows ------------------------------------------------------------
 
 class ConfigEntry(Generic[_T]):
@@ -84,6 +88,15 @@ class ConfigEntry(Generic[_T]):
         self.data = dict(data or {})
         self.options = dict(options or {})
         self.runtime_data = runtime_data
+        self.update_listeners: list = []
+        self.on_unload: list = []
+
+    def add_update_listener(self, listener):
+        self.update_listeners.append(listener)
+        return ("remove-listener", listener)
+
+    def async_on_unload(self, func):
+        self.on_unload.append(func)
 
 
 class _FlowBase:
@@ -128,6 +141,9 @@ class ConfigFlow(_FlowBase):
         if self.unique_id in self._configured_unique_ids:
             raise AbortFlow("already_configured")
 
+    def async_remove(self):
+        """HA's FlowHandler hook when a flow is abandoned; a no-op unless overridden."""
+
     def _get_reauth_entry(self):
         return self.reauth_entry
 
@@ -162,6 +178,15 @@ class DataUpdateCoordinator(Generic[_T]):
 
     async def async_request_refresh(self):
         self.refresh_requests += 1
+
+    async def async_config_entry_first_refresh(self):
+        """Mirror HA: UpdateFailed -> ConfigEntryNotReady, auth failures propagate."""
+        try:
+            self.data = await self._async_update_data()
+        except UpdateFailed as err:
+            self.last_update_success = False
+            raise ConfigEntryNotReady(str(err)) from err
+        self.last_update_success = True
 
 
 class CoordinatorEntity(Generic[_T]):
@@ -236,7 +261,8 @@ def _install_stubs() -> None:
         UnitOfPower=UnitOfPower, UnitOfTemperature=UnitOfTemperature,
     )
     _module("homeassistant.core", HomeAssistant=HomeAssistant, callback=lambda f: f)
-    _module("homeassistant.exceptions", ConfigEntryAuthFailed=ConfigEntryAuthFailed)
+    _module("homeassistant.exceptions", ConfigEntryAuthFailed=ConfigEntryAuthFailed,
+            ConfigEntryNotReady=ConfigEntryNotReady)
     _module(
         "homeassistant.config_entries",
         ConfigEntry=ConfigEntry, ConfigFlow=ConfigFlow, OptionsFlow=OptionsFlow,
