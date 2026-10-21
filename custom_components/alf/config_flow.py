@@ -84,6 +84,19 @@ class AlfConfigFlow(ConfigFlow, domain=DOMAIN):
         self._login = self._task = None
         return self.async_show_progress_done(next_step_id="failed")
 
+    @callback
+    def async_remove(self) -> None:
+        """Release the BankID session when the user closes the dialog mid-login.
+
+        HA calls this for every flow that ends; after success or _fail() the login
+        is already closed and cleared, so this only acts on an abandoned flow.
+        """
+        if self._task is not None and not self._task.done():
+            self._task.cancel()
+        if self._login is not None:
+            self.hass.async_create_task(self._login.async_close())
+        self._login = self._task = None
+
     async def async_step_failed(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:

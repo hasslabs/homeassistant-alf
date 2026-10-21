@@ -206,13 +206,6 @@ async def test_options_flow_defaults_to_current_value_and_saves_input():
     assert saved == {"type": "create_entry", "title": "", "data": {"enable_control": False}}
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "BUG: config_flow.py has no async_remove override, so a flow the user abandons "
-        "mid-QR never calls AlfBankIDLogin.async_close() and its own aiohttp session leaks"
-    ),
-)
 async def test_abandoned_flow_closes_login_session(monkeypatch):
     # HA calls FlowHandler.async_remove() when the user closes the dialog. The login was
     # started in async_step_user and owns a private aiohttp.ClientSession (bankid.py),
@@ -223,6 +216,41 @@ async def test_abandoned_flow_closes_login_session(monkeypatch):
 
     flow.async_remove()
     for _ in range(3):  # allow a scheduled close task to run
+        await asyncio.sleep(0)
+
+    assert created[0].closed == 1
+
+
+async def test_abandoned_flow_cancels_running_login_task(monkeypatch):
+    # Closed while a BankID poll is still in flight: the task is cancelled so it
+    # cannot touch the session after it has been closed.
+    flow, created = _flow(monkeypatch)
+    await flow.async_step_user()
+    await asyncio.wait({flow._task})
+    await flow.async_step_bankid()
+    running = flow._task
+    assert not running.done()
+
+    flow.async_remove()
+    for _ in range(3):
+        await asyncio.sleep(0)
+
+    assert running.cancelled()
+    assert created[0].closed == 1
+    assert flow._login is None and flow._task is None
+
+
+async def test_remove_after_finished_flow_does_not_close_again(monkeypatch):
+    # The success path already closed the login and cleared it; HA still calls
+    # async_remove when the flow ends, which must then be a no-op.
+    flow, created = _flow(monkeypatch, polls=["done"])
+    await flow.async_step_user()
+    await _step(flow)
+    assert (await _step(flow))["type"] == "progress_done"
+    assert created[0].closed == 1
+
+    flow.async_remove()
+    for _ in range(3):
         await asyncio.sleep(0)
 
     assert created[0].closed == 1
