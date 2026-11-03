@@ -28,8 +28,11 @@ if not ha_stubs.real_ha_available():
     models = ha_stubs.submodule("alfcloud.models")
 
 
-def _feature(fid, value, dfid=None):
-    return {"id": fid, "deviceFeatureId": dfid or f"df-{fid}", "current": {"value": value}}
+def _feature(fid, value, dfid=None, updated_at=None):
+    current = {"value": value}
+    if updated_at is not None:
+        current["updatedAt"] = updated_at
+    return {"id": fid, "deviceFeatureId": dfid or f"df-{fid}", "current": current}
 
 
 def _device(did="dev-1", *, state="online", features=(), battery_pct=None, battery_v=None,
@@ -219,6 +222,43 @@ async def test_sensor_values_none_when_device_gone():
     ents = await _setup(sensor, coord)
     coord.data = {}
     assert [e.native_value for e in ents] == [None, None, None]
+
+
+# --- cloud update time -----------------------------------------------------------------
+
+async def test_feature_entities_expose_the_cloud_update_time():
+    """Every feature-backed entity reports when Alf last touched that feature.
+
+    Without it a latched value (a leak flag the cloud never clears) is
+    indistinguishable from a fresh reading, since HA's own last_updated only
+    says when HA wrote the state.
+    """
+    dev = _device(features=[
+        _feature("leakbot.leak", True, updated_at="2026-10-27T08:12:03.000Z"),
+        _feature("generic.temperature", 21.5, updated_at="2026-11-03T09:14:00.000Z"),
+        _feature("generic.firmwareMode", "normal"),  # cloud sent no updatedAt
+        _feature("smartplug.onOff", True, updated_at="2026-11-03T09:00:00.000Z"),
+    ])
+    coord = _coordinator(dev)
+    binaries = _by_uid(await _setup(binary_sensor, coord))
+    sensors = _by_uid(await _setup(sensor, coord))
+    switches = _by_uid(await _setup(switch, coord, options={"enable_control": True}))
+
+    assert binaries["dev-1:leakbot.leak"].extra_state_attributes == {
+        "cloud_updated_at": "2026-10-27T08:12:03.000Z"
+    }
+    assert sensors["dev-1:generic.temperature"].extra_state_attributes == {
+        "cloud_updated_at": "2026-11-03T09:14:00.000Z"
+    }
+    assert sensors["dev-1:generic.firmwareMode"].extra_state_attributes is None
+    assert switches["dev-1:smartplug.onOff"].extra_state_attributes == {
+        "cloud_updated_at": "2026-11-03T09:00:00.000Z"
+    }
+    # Entities that aren't backed by a single feature have nothing to report.
+    assert binaries["dev-1:connectivity"].extra_state_attributes is None
+
+    coord.data = {}
+    assert binaries["dev-1:leakbot.leak"].extra_state_attributes is None
 
 
 # --- device info -----------------------------------------------------------------------

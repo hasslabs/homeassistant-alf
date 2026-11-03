@@ -17,7 +17,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from . import AlfConfigEntry
 from .alfcloud.features import classify_feature
 from .coordinator import AlfDataUpdateCoordinator
-from .entity import AlfEntity, humanize_feature
+from .entity import AlfEntity, AlfFeatureEntity, humanize_feature
 
 _KIND_TO_CLASS = {
     "smoke": BinarySensorDeviceClass.SMOKE,
@@ -51,7 +51,7 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class AlfBinarySensor(AlfEntity, BinarySensorEntity):
+class AlfBinarySensor(AlfFeatureEntity, BinarySensorEntity):
     def __init__(
         self,
         coordinator: AlfDataUpdateCoordinator,
@@ -59,9 +59,7 @@ class AlfBinarySensor(AlfEntity, BinarySensorEntity):
         feature_id: str,
         device_class: BinarySensorDeviceClass | None,
     ) -> None:
-        super().__init__(coordinator, device_id)
-        self._feature_id = feature_id
-        self._attr_unique_id = f"{device_id}:{feature_id}"
+        super().__init__(coordinator, device_id, feature_id)
         if device_class is not None:
             self._attr_device_class = device_class
             self._attr_translation_key = classify_feature(feature_id)

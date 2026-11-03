@@ -10,7 +10,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from . import AlfConfigEntry
 from .const import OPT_ENABLE_CONTROL
 from .coordinator import AlfDataUpdateCoordinator
-from .entity import AlfEntity
+from .entity import AlfFeatureEntity
 
 _ONOFF_FEATURE = "smartplug.onOff"
 
@@ -28,13 +28,12 @@ async def async_setup_entry(
     )
 
 
-class AlfSwitch(AlfEntity, SwitchEntity):
+class AlfSwitch(AlfFeatureEntity, SwitchEntity):
     _attr_device_class = SwitchDeviceClass.OUTLET
     _attr_translation_key = "outlet"
 
     def __init__(self, coordinator: AlfDataUpdateCoordinator, device_id: str) -> None:
-        super().__init__(coordinator, device_id)
-        self._attr_unique_id = f"{device_id}:{_ONOFF_FEATURE}"
+        super().__init__(coordinator, device_id, _ONOFF_FEATURE)
 
     @property
     def is_on(self) -> bool | None:
@@ -49,7 +48,7 @@ class AlfSwitch(AlfEntity, SwitchEntity):
 
     async def _async_set(self, value: bool) -> None:
         device = self.device
-        feature = device.features.get(_ONOFF_FEATURE) if device else None
+        feature = self.feature
         if device is None or feature is None:
             return
         await self.coordinator.client.async_set_feature(

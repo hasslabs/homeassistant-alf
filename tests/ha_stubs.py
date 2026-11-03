@@ -197,6 +197,11 @@ class CoordinatorEntity(Generic[_T]):
     def available(self) -> bool:
         return self.coordinator.last_update_success
 
+    @property
+    def extra_state_attributes(self):
+        # Mirrors homeassistant.helpers.entity.Entity: no extra attributes by default.
+        return None
+
 
 def _dr_async_get(hass):
     return hass.device_registry

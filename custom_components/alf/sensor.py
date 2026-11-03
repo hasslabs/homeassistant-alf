@@ -26,7 +26,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from . import AlfConfigEntry
 from .alfcloud.features import classify_feature
 from .coordinator import AlfDataUpdateCoordinator
-from .entity import AlfEntity, humanize_feature
+from .entity import AlfEntity, AlfFeatureEntity, humanize_feature
 
 # kind -> (device_class, unit, state_class)
 _KIND_DESC = {
@@ -62,7 +62,7 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class AlfSensor(AlfEntity, SensorEntity):
+class AlfSensor(AlfFeatureEntity, SensorEntity):
     def __init__(
         self,
         coordinator: AlfDataUpdateCoordinator,
@@ -72,9 +72,7 @@ class AlfSensor(AlfEntity, SensorEntity):
         unit: str,
         state_class: SensorStateClass,
     ) -> None:
-        super().__init__(coordinator, device_id)
-        self._feature_id = feature_id
-        self._attr_unique_id = f"{device_id}:{feature_id}"
+        super().__init__(coordinator, device_id, feature_id)
         self._attr_device_class = device_class
         self._attr_native_unit_of_measurement = unit
         self._attr_state_class = state_class
@@ -86,7 +84,7 @@ class AlfSensor(AlfEntity, SensorEntity):
         return device.value(self._feature_id) if device else None
 
 
-class AlfDiagnosticSensor(AlfEntity, SensorEntity):
+class AlfDiagnosticSensor(AlfFeatureEntity, SensorEntity):
     """A numeric/text feature with no known mapping - surfaced as diagnostic."""
 
     _attr_entity_category = EntityCategory.DIAGNOSTIC
@@ -94,9 +92,7 @@ class AlfDiagnosticSensor(AlfEntity, SensorEntity):
     def __init__(
         self, coordinator: AlfDataUpdateCoordinator, device_id: str, feature_id: str
     ) -> None:
-        super().__init__(coordinator, device_id)
-        self._feature_id = feature_id
-        self._attr_unique_id = f"{device_id}:{feature_id}"
+        super().__init__(coordinator, device_id, feature_id)
         self._attr_name = humanize_feature(feature_id)
 
     @property

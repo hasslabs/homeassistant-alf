@@ -6,7 +6,7 @@ import re
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .alfcloud import Device
+from .alfcloud import Device, Feature
 from .const import DOMAIN
 from .coordinator import AlfDataUpdateCoordinator
 
@@ -55,3 +55,38 @@ class AlfEntity(CoordinatorEntity[AlfDataUpdateCoordinator]):
             if room:
                 info["suggested_area"] = room
         return info
+
+
+class AlfFeatureEntity(AlfEntity):
+    """An entity backed by exactly one feature of an Alf device."""
+
+    def __init__(
+        self, coordinator: AlfDataUpdateCoordinator, device_id: str, feature_id: str
+    ) -> None:
+        super().__init__(coordinator, device_id)
+        self._feature_id = feature_id
+        self._attr_unique_id = f"{device_id}:{feature_id}"
+
+    @property
+    def feature(self) -> Feature | None:
+        device = self.device
+        return device.features.get(self._feature_id) if device else None
+
+    @property
+    def native_feature_value(self):
+        feature = self.feature
+        return feature.value if feature is not None else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, str] | None:
+        """Expose when Alf's cloud last touched this feature.
+
+        HA's own last_updated only says when HA wrote the state, so a value the
+        cloud latches and never clears (a leak flag after the leak is fixed)
+        looks identical to a fresh reading. This is the timestamp that tells
+        them apart.
+        """
+        feature = self.feature
+        if feature is None or feature.updated_at is None:
+            return None
+        return {"cloud_updated_at": feature.updated_at}
