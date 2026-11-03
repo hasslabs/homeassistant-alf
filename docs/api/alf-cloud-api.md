@@ -145,13 +145,36 @@ can be stale forever; a task is the signal that tracks reality.
 
 Timing: the task was created `11:14:28.524Z`, a third of a second after the feature changed, and
 the whole episode lasted **12 seconds** - shorter than the integration's 45 s poll, which missed
-it completely. The app sees it instantly over `wss://lfhub.net/` (string present in the APK; the
-WebSocket protocol is not mapped yet and is the obvious next recon target).
+it completely (Home Assistant recorded no state change at all).
 
-Open question: whether a task disappears by itself once the condition clears, or stays until
-acknowledged. Not resolved - the capture window ended with the task still the only payload seen,
-and no `acknowledged*` field appears in it. The APK has `acknowledgedLeakbotTasks=`, which
-suggests acknowledgement is tracked somewhere.
+**Tasks are ephemeral.** The task above was gone by `12:44Z` with nothing acknowledged in
+between - only `GET`s were issued - so a task clears itself once the condition clears. The exact
+lifetime was not pinned down (present at `11:14:30Z`, absent at `12:44Z`). Consequence: tasks are
+a view of what is wrong *now*, not a durable alarm log, so **polling tasks does not rescue a
+short event either** - a 12-second flood leaves a task that is also short-lived.
+
+### How the app gets alarms instantly (and why the integration can't, yet)
+
+Not over WebSockets. `wss://lfhub.net/ws/events/all` (both strings are in the APK, driven by a
+Ktor WebSockets client, with an `ApiWebSocketMessage.DeviceMessage` / `.UnknownMessage` model)
+answers `404 {"message":"no Route matched with those values"}` at the gateway, while
+`GET /api/v1/home` returns `200` with the same bearer token. The app also gates it behind
+`FeatureFlag.BooleanFlag.WebSockets`. So it is built but not deployed - do not design against it.
+
+The live path is **Firebase Cloud Messaging**: the app registers a token with
+`PUT /profile/pushToken` (body `PushTokenRequestBody(deviceId=...)`, captured returning `200`) and
+removes it with `DELETE /profile/pushToken/{tokenId}`, handled by
+`se.lftt.alf.pushnotifications.AlfFirebaseMessagingService`. Receiving those pushes outside the
+app would mean impersonating an FCM registration - possible, but a different class of work from
+the REST client.
+
+Known event ids (from the APK): `alarm.flood.true`, `alarm.fire.true`, `alarm.burglary.true`,
+`alarm.armed-away`, `alarm.armed-night`, `alarm.armed-partly`, `alarm.disarmed`,
+`alarm.sensitivity`, `alarm.system`. Notably there is **no** `alarm.highFlow.*`, even though the
+APK names a `LeakBotHighFlow` task type.
+
+**So a polling integration will miss short events, and no documented endpoint closes that gap.**
+Shortening the interval narrows the window without removing it.
 
 ## Polling / rate limits
 
