@@ -50,7 +50,8 @@ Read endpoints seen:
 | `GET /api/v1/home` | list of homes -> `{id: homeId, ...}` |
 | `GET /api/v1/home/{homeId}/device` | **device list + all states** (the polling endpoint) |
 | `GET /api/v1/home/{homeId}/climate` | climate (404 if none) |
-| `GET /home/{homeId}/profile` `/rules` `/device/tasks` `/content` | profile, rules, tasks, content |
+| `GET /home/{homeId}/device/tasks` | **outstanding alarms** (see "Tasks" below); `[]` when none |
+| `GET /home/{homeId}/profile` `/rules` `/content` | profile, rules, content |
 | `GET /notification/summary`, `/content/announcements`, `/product` | notifications, misc |
 
 Conditional caching: the server supports `ETag` / `If-None-Match` and returns **304** when unchanged
@@ -96,11 +97,61 @@ Device `type`s seen so far: `develco.gateway`, `frient.smartplug`, `frient.smoke
 | `generic.temperature` | number degC | `sensor` (temperature) |
 | `power.status.voltage` / `power.status.percentage` | number | `sensor` (battery) |
 | `state` (device-level) | "online"/... | `binary_sensor` (connectivity) |
-| leak / contact(opening) / motion / humidity | tbd | map when their feature ids are captured |
+| `waterLeakDetector.flood` | bool | `binary_sensor` (moisture) - clears correctly |
+| `leakbot.leak` | bool | **do not trust** - latches, see "Tasks" below |
+| `leakbot.highFlow` / `.hotPipe` / `.onPipe` | bool | diagnostic (`onPipe` reads true when correctly fitted) |
+| `leakbot.hardwareProblem` | bool | `binary_sensor` (problem) |
+| contact(opening) / motion / humidity | tbd | map when their feature ids are captured |
 
 Entities are built generically: iterate `devices[].features[]`, map by feature-id prefix; use
 `power`/`network`/`state` for battery + connectivity; group by `id` with `DeviceInfo`
 (name, `specifications.modelName`, vendor, `serialNumber`, `firmwareVersion`), and by `roomId` for areas.
+
+## Tasks - the alarm layer (captured 2026-11-03)
+
+`GET /home/{homeId}/device/tasks` -> a JSON **array**, `[]` when nothing is outstanding. The
+`/api/v1/`-prefixed spelling answers `500`, so only the unprefixed path works.
+
+This is the layer the app renders, and it is **not** the same thing as a feature value. Captured
+by wetting a `frient.waterLeakDetector` probe:
+
+```jsonc
+[{
+  "deviceId": "{deviceId}", "taskId": "{uuid}", "homeId": "{homeId}",
+  "eventId": "alarm.flood.true",            // alarm.<feature>.<value>
+  "title": "Vatten upptäckt",
+  "description": "Så gör du vid misstänkt läcka.",
+  "severity": "warning", "isUrgent": true,
+  "createdAt": "2026-11-03T11:14:28.524Z",
+  "homeScreenTitle": "Vatten upptäckt",
+  "homeScreenDescription": "{device name} har detekterat en läcka.",
+  "entryContext": "guide",
+  "content": { "id": "...", "title": "Misstänkt dropp", "description": "...",
+               "body": "### Tysta larmet ###\n..." }   // ready-made Swedish guide, markdown-ish
+}]
+```
+
+Task types named in the APK (v3.35.0), each keyed by a `deviceFeatureId`: `LeakDetectorFlood`,
+`LeakBotHighFlow`, `LeakBotLowSignal`, `LeakBotLowBattery`, `LeakBotHardwareProblem`. The app's
+LeakBot status strings are flow-based (`device_status_leakbot_normal_flow_label`,
+`..._HighFlowLeakage_label`, `..._lowFlowLeakage_label`), so a LeakBot verdict is **not** read off
+`leakbot.leak`.
+
+**Why this matters:** `leakbot.leak` on this account has read `true` since `2026-07-21T22:43:56Z`
+and has never been rewritten, while `tasks` is empty and the app shows normal flow. The feature
+latched and nothing clears it. By contrast `waterLeakDetector.flood` went `true` at
+`11:14:28.164Z` and back to `false` at `11:14:40.337Z` entirely on its own. So feature booleans
+can be stale forever; a task is the signal that tracks reality.
+
+Timing: the task was created `11:14:28.524Z`, a third of a second after the feature changed, and
+the whole episode lasted **12 seconds** - shorter than the integration's 45 s poll, which missed
+it completely. The app sees it instantly over `wss://lfhub.net/` (string present in the APK; the
+WebSocket protocol is not mapped yet and is the obvious next recon target).
+
+Open question: whether a task disappears by itself once the condition clears, or stays until
+acknowledged. Not resolved - the capture window ended with the task still the only payload seen,
+and no `acknowledged*` field appears in it. The APK has `acknowledgedLeakbotTasks=`, which
+suggests acknowledgement is tracked somewhere.
 
 ## Polling / rate limits
 
