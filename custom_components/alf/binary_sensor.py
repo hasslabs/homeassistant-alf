@@ -36,12 +36,13 @@ _DIAGNOSTIC_KEYS = {
     "leakbot.leak": "leak_latched",
 }
 
-# Features whose name promises an alarm the value can't deliver, so they never get a
-# device_class. leakbot.leak latches: measured 2026-11-03 it had read true since
-# 2026-07-21 without the cloud rewriting it once, while /device/tasks was empty and the
-# app showed normal flow. As a MOISTURE sensor that is a permanent false alarm. The
-# real LeakBot verdict lives in the tasks layer (see docs/api/alf-cloud-api.md);
-# waterLeakDetector.flood, which does clear itself, is unaffected.
+# Features that are a standing assessment rather than a live reading, so they never get a
+# device_class. leakbot.leak is LeakBot's verdict from thermal patterns over days: it is slow
+# both to raise and to clear, and needs a sustained dry period before it is revised. It has
+# been observed reading true unchanged for over three months while /device/tasks was empty and
+# the app showed normal flow. As a MOISTURE sensor an assessment that lingers like that reads
+# as an ongoing alarm, which is why it is a plain diagnostic instead.
+# waterLeakDetector.flood, which clears within seconds, is unaffected.
 _UNTRUSTED_FEATURES = frozenset({"leakbot.leak"})
 
 

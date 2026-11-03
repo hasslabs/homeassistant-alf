@@ -48,23 +48,37 @@ tell-tale pattern. From that it derives these signals:
 
 | Entity | Can show | Normally | What it means / if it flips |
 |---|---|---|---|
-| **Leak** | `Detected` / `Clear` | **Clear** | LeakBot's overall leak verdict. `Detected` = it believes water is leaking on the supply. **This is the one to build automations/alerts on.** |
+| **Leak flag (latched)** | `Off` / `On` | *(see below)* | LeakBot's raw leak flag. **Don't build automations on it.** It can latch `On` and never reset - see the warning below. |
 | **High water flow** | `Off` / `On` | **Off** | Raw diagnostic bit. `On` = water has flowed steadily longer than normal use explains (possible leak). Inferred, unverified - don't build alerts on it. |
 | **Hot pipe** | `Off` / `On` | **Off** | Raw diagnostic bit. `On` = the clamped pipe is too warm to sense leaks reliably (likely the wrong pipe). Inferred, unverified. |
 | **Detached from pipe** | `Off` / `On` | **Off** | Raw diagnostic bit, **unreliable** - some correctly-attached units still report `On`. Therefore **disabled by default**. Don't rely on it to tell whether the clamp came off. |
 | **Problem** | `OK` / `Problem` | **OK** | The device's own hardware health. `Problem` = a device fault (needs attention). |
 | **Connectivity** | `Connected` / `Disconnected` | **Connected** | `Disconnected` = the device is offline (battery, range, or hub down). |
 
-**A healthy LeakBot reads:** Leak = `Clear`, Problem = `OK`, Connectivity = `Connected`.
+**A healthy LeakBot reads:** Problem = `OK`, Connectivity = `Connected`.
 
-High water flow / Hot pipe / Detached are **raw, inferred diagnostic bits** (not verified fault signals),
-shown as plain `Off`/`On` sensors under Diagnostic rather than red "Problem". In particular **Detached
-from pipe is unreliable** (can read `On` while the clamp is fine) and is disabled by default. **Leak**,
-**Problem** and **Connectivity** are the ones to build automations on.
+Every LeakBot bit is a **raw, inferred diagnostic signal** (not a verified fault), shown as a plain
+`Off`/`On` sensor under Diagnostic rather than a red "Problem" or a moisture alarm. In particular
+**Detached from pipe is unreliable** (can read `On` while the clamp is fine) and is disabled by default.
+Of LeakBot's entities, only **Problem** and **Connectivity** are worth building automations on.
 
+> **Warning: the leak flag is a slow standing assessment, not a live reading.** LeakBot judges from
+> thermal patterns over **days**, so the flag is slow both to raise and to clear, and needs a sustained
+> dry period before it is revised. It can therefore stay `On` for days or weeks after the cause is
+> gone, and has been observed unchanged for months. That is why the entity carries **no**
+> `device_class`: as a moisture sensor, an assessment that lingers like that reads as an ongoing alarm.
+>
+> The `cloud_updated_at` attribute shows when the cloud last **changed** the value, not when the device
+> last reported. An old timestamp means "unchanged since then", not that the device went quiet. If the
+> flag stays `On` long after a leak is fixed, contact Leakbot support via LF - they can reset the
+> device's assessment.
+>
+> LeakBot's current open items live in Alf's *alarm layer* (`/device/tasks`), which the integration does
+> not read yet - see [`docs/api/alf-cloud-api.md`](docs/api/alf-cloud-api.md). For leak alerts that
+> clear within seconds, use an actual leak detector (`waterLeakDetector.flood`).
+>
 > The meanings of High water flow / Hot pipe / Detached are inferred from LeakBot's Thermi-Q mechanism
-> and the API field names, not confirmed. If **Leak** shows `Detected` while everything is dry, check the
-> Alf app - it may be a genuine slow-leak warning to investigate.
+> and the API field names, not confirmed.
 
 ### Gateway (Develco) and batteries
 - **Connectivity** - the hub is online. (Its internal `mode`/`scan` settings are not exposed.)
@@ -106,8 +120,18 @@ every session still requires your own BankID login. Nothing to configure.
 
 ## Not for life-safety timing
 
-Home Assistant polls the cloud (~45 s), so leak/smoke changes here lag slightly. The Alf alarm central
-remains the real-time safety path; this integration is for visibility, history, and automation.
+Home Assistant polls the cloud (~45 s), so leak/smoke changes here lag - and **a short enough alarm can
+be missed entirely**. A real water alarm on 2026-11-03 lasted 12 seconds: the cloud recorded it
+correctly, but two consecutive polls fell either side of it and Home Assistant saw no change at all.
+
+No available endpoint closes that gap. The app gets its instant alerts by push (Firebase), not through
+any API the integration can read; the WebSocket present in the app's code is not deployed; and the alarm
+layer (`/device/tasks`) clears when the condition clears, making it equally short-lived. A shorter poll
+interval narrows the window without closing it.
+
+**The Alf alarm central and the app's own push notifications remain the real-time safety path.** This
+integration is for visibility, history and automation - not for being the only way a water alarm
+reaches you.
 
 ## Development
 

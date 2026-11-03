@@ -136,11 +136,12 @@ async def test_leakbot_diagnostic_bits_are_named_not_alarms_and_onpipe_disabled(
 
 
 async def test_leakbot_leak_is_never_a_moisture_alarm():
-    """leakbot.leak latches: it reads true on a cleared leak and the cloud never
-    rewrites it (measured 2026-11-03: true since 2026-07-21 with no update, while
-    the tasks endpoint was empty and the app showed normal flow). As a MOISTURE
-    binary_sensor it is a permanent false alarm, so it is a plain diagnostic.
-    A real detector's flood feature, which does clear itself, keeps the alarm class.
+    """leakbot.leak is a standing assessment, not a live reading: LeakBot judges from
+    thermal patterns over days, so it keeps reading true long after the condition is
+    resolved (observed unchanged for over three months, while the tasks endpoint was
+    empty). As a MOISTURE binary_sensor that reads as an ongoing alarm, so it is a
+    plain diagnostic. A real detector's flood feature, which clears within seconds,
+    keeps the alarm class.
     """
     dev = _device(features=[
         _feature("leakbot.leak", True),

@@ -137,11 +137,23 @@ LeakBot status strings are flow-based (`device_status_leakbot_normal_flow_label`
 `..._HighFlowLeakage_label`, `..._lowFlowLeakage_label`), so a LeakBot verdict is **not** read off
 `leakbot.leak`.
 
-**Why this matters:** `leakbot.leak` on this account has read `true` since `2026-07-21T22:43:56Z`
-and has never been rewritten, while `tasks` is empty and the app shows normal flow. The feature
-latched and nothing clears it. By contrast `waterLeakDetector.flood` went `true` at
-`11:14:28.164Z` and back to `false` at `11:14:40.337Z` entirely on its own. So feature booleans
-can be stale forever; a task is the signal that tracks reality.
+**Why this matters:** a feature value and a task answer different questions. `leakbot.leak` has
+been observed reading `true` unchanged for over three months while `tasks` was empty and the app
+showed normal flow, so a client reading only features sees an alarm the app does not.
+
+That is not a misreport. LeakBot judges from thermal patterns over days, so its verdict is slow
+to revise and needs a sustained dry period before it changes - it is a standing assessment, not
+a live reading. Expect it to lag a resolved condition by days or longer, and treat a
+long-unchanged `true` as unknown rather than as either a leak or a bug.
+
+### Reading `current.updatedAt`
+
+**It tracks value changes, not reports.** `waterLeakDetector.flood` sat at
+`2026-08-25T10:29:25Z` for over two months while the device was demonstrably alive, and moved
+only when the value itself changed during the wet test. So an old timestamp means "this value
+has not changed since", *not* "the device went quiet" - don't diagnose a silent device from it.
+To tell a live device apart from a dead one, use a feature that moves on its own (a battery
+device's `generic.temperature` drifts a tenth every hour or two) plus the device-level `state`.
 
 Timing: the task was created `11:14:28.524Z`, a third of a second after the feature changed, and
 the whole episode lasted **12 seconds** - shorter than the integration's 45 s poll, which missed

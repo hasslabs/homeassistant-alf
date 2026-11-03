@@ -45,23 +45,37 @@ mönster. Utifrån det härleds dessa signaler:
 
 | Entitet | Kan visa | Normalt | Vad det betyder / om den avviker |
 |---|---|---|---|
-| **Läcka** | `Läcka` / `Torrt` | **Torrt** | LeakBots samlade läck-bedömning. `Läcka` = den tror det läcker på tilloppet. **Det är den här du bygger automationer/notiser på.** |
+| **Läckageflagga (fastlåst)** | `Av` / `På` | *(se nedan)* | LeakBots råa läck-flagga. **Bygg inte automationer på den.** Den kan låsa sig på `På` och aldrig återställas - se varningen nedan. |
 | **Högt vattenflöde** | `Av` / `På` | **Av** | Rå diagnostik-bit. `På` = vatten har runnit stadigt längre än normal användning förklarar (möjlig läcka). Tolkad, ej verifierad - bygg inte larm på den. |
 | **Varmt rör** | `Av` / `På` | **Av** | Rå diagnostik-bit. `På` = röret den klämmer på är för varmt för att mäta läckor tillförlitligt (troligen fel rör). Tolkad, ej verifierad. |
 | **Lossnat från röret** | `Av` / `På` | **Av** | Rå diagnostik-bit, **opålitlig** - vissa enheter som sitter korrekt visar ändå `På`. Därför **avstängd som standard**. Lita inte på den för att avgöra om klämman lossnat. |
 | **Problem** | `OK` / `Problem` | **OK** | Hårdvaruhälsa på själva enheten. `Problem` = fel på enheten (behöver ses över). |
 | **Anslutning** | `Ansluten` / `Frånkopplad` | **Ansluten** | `Frånkopplad` = enheten är offline (batteri, räckvidd eller hubben nere). |
 
-**En frisk LeakBot:** Läcka = `Torrt`, Problem = `OK`, Anslutning = `Ansluten`.
+**En frisk LeakBot:** Problem = `OK`, Anslutning = `Ansluten`.
 
-Högt vattenflöde / Varmt rör / Lossnat är **råa, tolkade diagnostik-bitar** (inte verifierade fel-larm),
-så de visas som vanliga `Av`/`På`-sensorer under Diagnostik - inte som röda "Problem". Speciellt
+Samtliga LeakBot-bitar är **råa, tolkade diagnostik-signaler** (inte verifierade fel-larm), så de visas
+som vanliga `Av`/`På`-sensorer under Diagnostik - inte som röda "Problem" eller som fukt-larm. Speciellt
 **Lossnat från röret är opålitlig** (kan visa `På` fast klämman sitter kvar) och är därför avstängd som
-standard. **Läcka**, **Problem** och **Anslutning** är de du bygger automationer på.
+standard. Av LeakBots entiteter är det bara **Problem** och **Anslutning** du bör bygga automationer på.
 
+> **Varning: läckageflaggan är en trögrörlig bedömning, inte en avläsning.** LeakBot dömer utifrån
+> termiska mönster över **dygn**, så flaggan både tänds och släcks långsamt och behöver en längre torr
+> period innan den revideras. Den kan därför stå kvar på `På` i dagar eller veckor efter att orsaken är
+> borta, och den har observerats oförändrad i flera månader. Därför har entiteten **inget**
+> `device_class`: som fuktsensor låter en sådan bedömning som ett pågående larm.
+>
+> Attributet `cloud_updated_at` visar när molnet senast **ändrade** värdet - inte när enheten senast
+> hörde av sig. En gammal tidsstämpel betyder alltså "oförändrat sedan dess", inte att enheten tystnat.
+> Står flaggan kvar på `På` länge efter att en läcka är åtgärdad: kontakta Leakbot-supporten via LF,
+> de kan nollställa enhetens bedömning.
+>
+> LeakBots aktuella ärenden ligger i Alfs *larm-lager* (`/device/tasks`), som integrationen ännu inte
+> läser - se [`docs/api/alf-cloud-api.md`](docs/api/alf-cloud-api.md). För läckagelarm med
+> sekundsnabb återställning, använd en riktig läckdetektor (`waterLeakDetector.flood`).
+>
 > Betydelserna för Högt vattenflöde / Varmt rör / Lossnat är härledda ur LeakBots Thermi-Q-mekanik och
-> API-fältnamnen, inte bekräftade. Om **Läcka** visar `Läcka` medan allt är torrt: kolla Alf-appen - det
-> kan vara en äkta smygläcka att utreda.
+> API-fältnamnen, inte bekräftade.
 
 ### Gateway (Develco) och batterier
 - **Anslutning** - hubben är online. (Dess interna `mode`/`scan`-inställningar exponeras inte.)
@@ -103,8 +117,18 @@ egen hand: varje session kräver ändå din egen BankID-inloggning. Inget du beh
 
 ## Inte för livskritisk timing
 
-Home Assistant pollar molnet (~45 s), så läck-/rökändringar här släpar något. Alf:s larmcentral är kvar
-som realtids-säkerhetsväg; den här integrationen är för överblick, historik och automationer.
+Home Assistant pollar molnet (~45 s), så läck-/rökändringar här släpar - och **ett tillräckligt kort
+larm kan missas helt**. Ett verkligt vattenlarm 2026-11-03 varade 12 sekunder: molnet registrerade det
+korrekt, men pollningen hamnade på var sin sida om händelsen och Home Assistant såg ingen ändring alls.
+
+Det går inte att komma runt med de endpoints som finns. Appen får sina omedelbara larm via push
+(Firebase), inte via något API integrationen kan läsa; WebSocketen som finns i appens kod är inte
+driftsatt, och larm-lagret (`/device/tasks`) töms när villkoret upphör och är därför lika kortlivat.
+Ett kortare pollintervall krymper fönstret men stänger det inte.
+
+**Alf:s larmcentral och appens egna pushnotiser är kvar som realtids-säkerhetsväg.** Den här
+integrationen är för överblick, historik och automationer - inte för att vara den enda vägen ett
+vattenlarm når dig.
 
 ## Utveckling
 
