@@ -85,3 +85,49 @@ def test_addon_writes_only_target_hosts_with_safe_numbered_names(tmp_path, monke
 def test_parse_body_invalid_json_falls_back_to_text():
     assert parse_body("application/json; charset=utf-8", b"{broken") == "{broken"
     assert parse_body("APPLICATION/JSON", b"[1]") == [1]
+
+
+# --- compressed bodies -----------------------------------------------------------------
+# A capture where mitmproxy handed over the still-compressed stream used to be stored as
+# text, which replaced every non-UTF-8 byte with U+FFFD and destroyed the payload for
+# good. Three /device captures from July were lost that way.
+
+def _gzip(raw: bytes) -> bytes:
+    import gzip
+
+    return gzip.compress(raw)
+
+
+def test_parse_body_gunzips_a_compressed_json_body():
+    body = _gzip(b'{"devices": [{"id": "d1"}]}')
+    assert parse_body("application/json", body, "gzip") == {"devices": [{"id": "d1"}]}
+
+
+def test_parse_body_gunzips_even_when_the_header_is_missing():
+    # Sniffing the gzip magic is what makes this robust: the stored headers are the
+    # originals, so a body mitmproxy already decoded carries no magic and is left alone.
+    assert parse_body("application/json", _gzip(b'{"a": 1}')) == {"a": 1}
+
+
+def test_parse_body_leaves_already_decoded_bodies_alone():
+    assert parse_body("application/json", b'{"a": 1}', "gzip") == {"a": 1}
+
+
+def test_parse_body_falls_back_to_raw_text_when_decompression_fails():
+    assert parse_body("text/plain", b"not really deflate", "deflate") == "not really deflate"
+
+
+def test_addon_stores_a_gzipped_response_as_readable_json(tmp_path, monkeypatch):
+    import json
+
+    from recon import capture_addon
+
+    monkeypatch.setattr(capture_addon, "RAW_DIR", tmp_path / "raw")
+    addon = capture_addon.AlfCaptureAddon()
+    flow = _flow("lfhub.net", "/api/v1/home/abc/device",
+                 resp_body=_gzip(b'{"devices": [{"id": "leakbot-1"}]}'))
+    flow.response.headers = {"content-type": "application/json", "content-encoding": "gzip"}
+    addon.response(flow)
+
+    written = json.loads(next((tmp_path / "raw").iterdir()).read_text(encoding="utf-8"))
+    assert written["response"]["body"] == {"devices": [{"id": "leakbot-1"}]}

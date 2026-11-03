@@ -8,8 +8,10 @@ The addon class accesses the injected flow object duck-typed.
 """
 from __future__ import annotations
 
+import gzip
 import json
 import re
+import zlib
 from pathlib import Path
 from typing import Any
 
@@ -29,10 +31,37 @@ def is_target_host(host: str) -> bool:
     return any(suffix in lowered for suffix in TARGET_HOST_SUFFIXES)
 
 
-def parse_body(content_type: str | None, raw: bytes | None) -> Any:
+def decompress_body(raw: bytes, content_encoding: str | None) -> bytes:
+    """Undo content-encoding so the body can be stored as readable text.
+
+    mitmproxy normally hands over decoded bytes, but when its own decoding fails it
+    returns the compressed stream instead. Storing that as text replaces every
+    non-UTF-8 byte with U+FFFD and the payload is gone for good, so decompress here
+    rather than trusting the caller. Sniffing the gzip magic comes first because it
+    is the only signal that stays correct either way: an already-decoded body has no
+    magic and is returned untouched, header or no header.
+    """
+    try:
+        if raw[:2] == b"\x1f\x8b":
+            return gzip.decompress(raw)
+        encoding = (content_encoding or "").lower().strip()
+        if encoding == "deflate":
+            return zlib.decompress(raw, -zlib.MAX_WBITS)
+        if encoding == "br":
+            import brotli  # only installed with the [capture] extra
+
+            return brotli.decompress(raw)
+    except Exception:  # noqa: BLE001 - a body we can't decompress is still worth storing
+        return raw
+    return raw
+
+
+def parse_body(
+    content_type: str | None, raw: bytes | None, content_encoding: str | None = None
+) -> Any:
     if not raw:
         return None
-    text = raw.decode("utf-8", errors="replace")
+    text = decompress_body(raw, content_encoding).decode("utf-8", errors="replace")
     if content_type and "json" in content_type.lower():
         try:
             return json.loads(text)
@@ -74,9 +103,17 @@ class AlfCaptureAddon:
             path=flow.request.path.split("?", 1)[0],
             status=flow.response.status_code,
             req_headers=dict(flow.request.headers),
-            req_body=parse_body(flow.request.headers.get("content-type"), flow.request.get_content(strict=False)),
+            req_body=parse_body(
+                flow.request.headers.get("content-type"),
+                flow.request.get_content(strict=False),
+                flow.request.headers.get("content-encoding"),
+            ),
             resp_headers=dict(flow.response.headers),
-            resp_body=parse_body(flow.response.headers.get("content-type"), flow.response.get_content(strict=False)),
+            resp_body=parse_body(
+                flow.response.headers.get("content-type"),
+                flow.response.get_content(strict=False),
+                flow.response.headers.get("content-encoding"),
+            ),
         )
         name = _SAFE.sub("_", f"{self._counter:04d}_{flow.request.method}_{record['path']}")
         (RAW_DIR / f"{name}.json").write_text(

@@ -68,6 +68,11 @@ Open each app view. Trigger one of each device type so its state endpoint fires:
 Magnetsensor, lift a water detector, toggle a Smart Plug. Each captured exchange is written to
 `recon/raw/NNNN_METHOD_path.json`.
 
+> **Compressed bodies:** `capture_addon.py` decompresses gzip/deflate/br before storing a
+> body. It did not until 2026-11-03, so the three `*_device.json` fixtures captured in July
+> hold the raw gzip stream decoded as text - every non-UTF-8 byte became U+FFFD and the
+> payload is unrecoverable. Don't try to mine them; re-capture instead.
+
 ## 7. Redact - before anything is committed
 
 This rewrites every raw record into a redacted fixture using `recon/redact.py`:
