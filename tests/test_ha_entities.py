@@ -94,20 +94,21 @@ def test_humanize_feature(fid, expected):
 async def test_binary_platform_maps_bools_and_adds_connectivity():
     dev = _device(features=[
         _feature("fire.smoke", False),
-        _feature("leakbot.leak", True),
+        _feature("waterLeakDetector.flood", True),
         _feature("generic.temperature", 21.5),  # not a bool -> not a binary sensor
         _feature("weird.mysteryFlag", True),
     ])
     ents = _by_uid(await _setup(binary_sensor, _coordinator(dev)))
 
     assert set(ents) == {
-        "dev-1:connectivity", "dev-1:fire.smoke", "dev-1:leakbot.leak", "dev-1:weird.mysteryFlag",
+        "dev-1:connectivity", "dev-1:fire.smoke", "dev-1:waterLeakDetector.flood",
+        "dev-1:weird.mysteryFlag",
     }
     smoke = ents["dev-1:fire.smoke"]
     assert smoke._attr_device_class == "smoke"
     assert smoke._attr_translation_key == "smoke"
     assert smoke.is_on is False
-    leak = ents["dev-1:leakbot.leak"]
+    leak = ents["dev-1:waterLeakDetector.flood"]
     assert leak._attr_device_class == "moisture"
     assert leak.is_on is True
     unknown = ents["dev-1:weird.mysteryFlag"]
@@ -132,6 +133,30 @@ async def test_leakbot_diagnostic_bits_are_named_not_alarms_and_onpipe_disabled(
         assert not hasattr(ent, "_attr_device_class")  # never PROBLEM - no crying wolf
     assert ents["dev-1:leakbot.onPipe"]._attr_entity_registry_enabled_default is False
     assert not hasattr(ents["dev-1:leakbot.hotPipe"], "_attr_entity_registry_enabled_default")
+
+
+async def test_leakbot_leak_is_never_a_moisture_alarm():
+    """leakbot.leak latches: it reads true on a cleared leak and the cloud never
+    rewrites it (measured 2026-11-03: true since 2026-07-21 with no update, while
+    the tasks endpoint was empty and the app showed normal flow). As a MOISTURE
+    binary_sensor it is a permanent false alarm, so it is a plain diagnostic.
+    A real detector's flood feature, which does clear itself, keeps the alarm class.
+    """
+    dev = _device(features=[
+        _feature("leakbot.leak", True),
+        _feature("waterLeakDetector.flood", False),
+    ])
+    ents = _by_uid(await _setup(binary_sensor, _coordinator(dev)))
+
+    latched = ents["dev-1:leakbot.leak"]
+    assert not hasattr(latched, "_attr_device_class")
+    assert latched._attr_entity_category == "diagnostic"
+    assert latched._attr_translation_key == "leak_latched"
+    assert latched.is_on is True  # still reported, just not as an alarm
+
+    real = ents["dev-1:waterLeakDetector.flood"]
+    assert real._attr_device_class == "moisture"
+    assert real._attr_translation_key == "moisture"
 
 
 async def test_connectivity_stays_available_while_device_offline():

@@ -33,7 +33,16 @@ _DIAGNOSTIC_KEYS = {
     "leakbot.highflow": "high_flow",
     "leakbot.hotpipe": "hot_pipe",
     "leakbot.onpipe": "on_pipe",
+    "leakbot.leak": "leak_latched",
 }
+
+# Features whose name promises an alarm the value can't deliver, so they never get a
+# device_class. leakbot.leak latches: measured 2026-11-03 it had read true since
+# 2026-07-21 without the cloud rewriting it once, while /device/tasks was empty and the
+# app showed normal flow. As a MOISTURE sensor that is a permanent false alarm. The
+# real LeakBot verdict lives in the tasks layer (see docs/api/alf-cloud-api.md);
+# waterLeakDetector.flood, which does clear itself, is unaffected.
+_UNTRUSTED_FEATURES = frozenset({"leakbot.leak"})
 
 
 async def async_setup_entry(
@@ -46,7 +55,11 @@ async def async_setup_entry(
         for feature_id, feature in device.features.items():
             if not isinstance(feature.value, bool):
                 continue
-            device_class = _KIND_TO_CLASS.get(classify_feature(feature_id))
+            device_class = (
+                None
+                if feature_id.lower() in _UNTRUSTED_FEATURES
+                else _KIND_TO_CLASS.get(classify_feature(feature_id))
+            )
             entities.append(AlfBinarySensor(coordinator, device.id, feature_id, device_class))
     async_add_entities(entities)
 

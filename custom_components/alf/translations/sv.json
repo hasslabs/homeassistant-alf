@@ -40,6 +40,7 @@
       "high_flow": {"name": "Högt vattenflöde"},
       "hot_pipe": {"name": "Varmt rör"},
       "on_pipe": {"name": "Lossnat från röret"},
+      "leak_latched": {"name": "Läckageflagga (fastlåst)"},
       "connectivity": {"name": "Anslutning"}
     },
     "sensor": {

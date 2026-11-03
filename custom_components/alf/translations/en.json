@@ -40,6 +40,7 @@
       "high_flow": {"name": "High water flow"},
       "hot_pipe": {"name": "Hot pipe"},
       "on_pipe": {"name": "Detached from pipe"},
+      "leak_latched": {"name": "Leak flag (latched)"},
       "connectivity": {"name": "Connectivity"}
     },
     "sensor": {
